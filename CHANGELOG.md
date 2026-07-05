@@ -1,3 +1,10 @@
+# [2.7.0](https://github.com/matbeedotcom/libreoffice-document-converter/compare/v2.6.0...v2.7.0) (2026-07-05)
+
+
+### Features
+
+* publish browser assets to GitHub Pages with an in-browser demo ([b6c402e](https://github.com/matbeedotcom/libreoffice-document-converter/commit/b6c402e62af30084f8d72e851eb0ab1e8e3ad9c8))
+
 # [2.6.0](https://github.com/matbeedotcom/libreoffice-document-converter/compare/v2.5.1...v2.6.0) (2026-03-17)
 
 
