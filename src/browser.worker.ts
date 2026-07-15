@@ -122,7 +122,7 @@ function emitProgress(progress: WasmLoadProgress) {
  *
  * Modern Emscripten uses fetch() API for downloading .wasm and .data files
  */
-function installProgressInterceptors() {
+function installProgressInterceptors(wasmUrl?: string, dataUrl?: string) {
   const originalFetch = self.fetch;
 
   // Intercept fetch for progress tracking
@@ -132,10 +132,10 @@ function installProgressInterceptors() {
 
     // Identify which file is being downloaded
     let phase: WasmLoadPhase | null = null;
-    if (url.includes('soffice.wasm')) {
+    if ((wasmUrl && url === wasmUrl) || url.includes('soffice.wasm')) {
       phase = 'download-wasm';
       console.log('[Worker] Starting fetch download: soffice.wasm');
-    } else if (url.includes('soffice.data')) {
+    } else if ((dataUrl && url === dataUrl) || url.includes('soffice.data')) {
       phase = 'download-data';
       console.log('[Worker] Starting fetch download: soffice.data');
     }
@@ -218,10 +218,10 @@ function installProgressInterceptors() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (xhr).send = function (body?: any) {
       let phase: WasmLoadPhase | null = null;
-      if (requestUrl.includes('soffice.wasm')) {
+      if ((wasmUrl && requestUrl === wasmUrl) || requestUrl.includes('soffice.wasm')) {
         phase = 'download-wasm';
         console.log('[Worker] Starting XHR download: soffice.wasm');
-      } else if (requestUrl.includes('soffice.data')) {
+      } else if ((dataUrl && requestUrl === dataUrl) || requestUrl.includes('soffice.data')) {
         phase = 'download-data';
         console.log('[Worker] Starting XHR download: soffice.data');
       }
@@ -563,7 +563,7 @@ async function handleInit(msg: WorkerMessage) {
   // Default is OFF because wrapping fetch responses can break WebAssembly streaming compilation
   if (msg.enableProgressTracking) {
     console.log('[Worker] Progress tracking enabled, installing interceptors...');
-    installProgressInterceptors();
+    installProgressInterceptors(sofficeWasm, sofficeData);
   } else {
     console.log('[Worker] Progress tracking disabled (default)');
   }
@@ -585,8 +585,17 @@ async function handleInit(msg: WorkerMessage) {
         else if (path.includes('.worker.')) result = sofficeWorkerJs;
         else {
           // Fallback: derive from sofficeJs path for any other files
-          const baseUrl = sofficeJs.substring(0, sofficeJs.lastIndexOf('/') + 1);
-          result = `${baseUrl}${path}`;
+          if (sofficeJs.startsWith('blob:')) {
+            result = path;
+          } else {
+            const lastSlash = sofficeJs.lastIndexOf('/');
+            if (lastSlash === -1) {
+              result = path;
+            } else {
+              const baseUrl = sofficeJs.substring(0, lastSlash + 1);
+              result = `${baseUrl}${path}`;
+            }
+          }
         }
         console.log('[Worker] locateFile called:', path, 'scriptDir:', _scriptDir, '-> result:', result);
         return result;

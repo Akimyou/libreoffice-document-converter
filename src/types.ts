@@ -363,7 +363,7 @@ export const DEFAULT_WASM_BASE_URL = '/wasm/';
  * Create WASM file paths from a base URL
  * Convenience helper for users who keep all WASM files in one directory
  *
- * @param baseUrl - Base URL ending with '/' (e.g., '/wasm/', 'https://cdn.example.com/wasm/')
+ * @param baseUrlOrPaths - Base URL ending with '/' or a partial object with explicit paths.
  *                  Defaults to '/wasm/' for same-origin hosting
  * @returns Object with all WASM file paths
  *
@@ -375,16 +375,30 @@ export const DEFAULT_WASM_BASE_URL = '/wasm/';
  *   browserWorkerJs: '/dist/browser.worker.js',
  * });
  *
- * // Or use your own CDN
+ * // Or provide specific Blob URLs
  * const converter = new WorkerBrowserConverter({
- *   ...createWasmPaths('https://cdn.example.com/wasm/'),
+ *   ...createWasmPaths({
+ *     sofficeJs: URL.createObjectURL(jsBlob),
+ *     sofficeWasm: URL.createObjectURL(wasmBlob),
+ *   }),
  *   browserWorkerJs: '/dist/browser.worker.js',
  * });
  * ```
  */
-export function createWasmPaths(baseUrl: string = DEFAULT_WASM_BASE_URL): BrowserWasmPaths {
+export function createWasmPaths(baseUrlOrPaths: string | Partial<BrowserWasmPaths> = DEFAULT_WASM_BASE_URL): BrowserWasmPaths {
+  if (typeof baseUrlOrPaths === 'object') {
+    const base = DEFAULT_WASM_BASE_URL;
+    return {
+      sofficeJs: `${base}soffice.js`,
+      sofficeWasm: `${base}soffice.wasm`,
+      sofficeData: `${base}soffice.data`,
+      sofficeWorkerJs: `${base}soffice.worker.js`,
+      ...baseUrlOrPaths,
+    };
+  }
+
   // Ensure baseUrl ends with /
-  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const base = baseUrlOrPaths.endsWith('/') ? baseUrlOrPaths : `${baseUrlOrPaths}/`;
   return {
     sofficeJs: `${base}soffice.js`,
     sofficeWasm: `${base}soffice.wasm`,

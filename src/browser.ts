@@ -39,6 +39,29 @@ export {
 // Font loading utilities (browser-compatible)
 export { loadFontsFromUrl } from './font-loader.browser.js';
 
+/**
+ * Create a Blob URL from a File, Uint8Array, or ArrayBuffer.
+ * Useful for providing Blob URLs to the converter when files are bundled or fetched manually.
+ */
+export function createBlobUrlFromFile(data: Uint8Array | ArrayBuffer | File, mimeType?: string): string {
+  if (data instanceof File) {
+    return URL.createObjectURL(data);
+  }
+  const blob = new Blob([data as any], { type: mimeType });
+  return URL.createObjectURL(blob);
+}
+
+/**
+ * Fetch a URL and convert it to a Blob URL.
+ * Useful for bypassing same-origin worker script restrictions.
+ */
+export async function createBlobUrlFromUrl(url: string, mimeType?: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText} (${res.status})`);
+  const buffer = await res.arrayBuffer();
+  return createBlobUrlFromFile(buffer, mimeType || res.headers.get('Content-Type') || undefined);
+}
+
 // Export editor API
 export {
   createEditor,
@@ -215,8 +238,12 @@ export class BrowserConverter {
           if (path.endsWith('.wasm')) return sofficeWasm;
           if (path.endsWith('.data')) return sofficeData;
           if (path.endsWith('.worker.js') || path.endsWith('.worker.cjs')) return sofficeWorkerJs;
+
           // Fallback: derive from sofficeJs path for any other files
-          const baseUrl = sofficeJs.substring(0, sofficeJs.lastIndexOf('/') + 1);
+          if (sofficeJs.startsWith('blob:')) return path;
+          const lastSlash = sofficeJs.lastIndexOf('/');
+          if (lastSlash === -1) return path;
+          const baseUrl = sofficeJs.substring(0, lastSlash + 1);
           return `${baseUrl}${path}`;
         },
         print: this.options.verbose ? console.log : () => { },
